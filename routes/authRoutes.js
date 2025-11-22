@@ -1,17 +1,35 @@
 const express = require('express');
+const {
+  signUp,
+  signIn,
+  googleAuth,
+  googleAuthWithAccessToken,
+  getCurrentUser,
+  updateProfile,
+  changePassword,
+  deleteAccount,
+  forgotPassword,
+  resetPassword,
+  logout,
+} = require('../controllers/authController');
+const authMiddleware = require('../middleware/authMiddleware');
+
 const router = express.Router();
-const authController = require('../controllers/authController');
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
 
-router.post('/signup', authController.signup);
-router.post('/signin', authController.signin);
+router.post('/signup', signUp);
+router.post('/signin', signIn);
+router.post('/google', googleAuth);
+router.post('/google-access', googleAuthWithAccessToken);
 
-// /auth/me - Get current user from JWT (Authorization: Bearer <token>)
-router.get('/me', authController.me);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
-// /auth/logout - For stateless JWT, just respond OK (client should remove token)
-router.post('/logout',authController.logout);
-router.post('/google', authController.googleAuth);
+router.get('/me', authMiddleware, getCurrentUser);
+router.put('/profile', authMiddleware, updateProfile);
+router.put('/password', authMiddleware, changePassword);
+router.delete('/account', authMiddleware, deleteAccount);
+
+// Stateless logout – client should drop the token, but we keep the route for consistency
+router.post('/logout', authMiddleware, logout);
 
 module.exports = router;
