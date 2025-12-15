@@ -1,158 +1,328 @@
-# BockDocs Backend
+# BockDocs Backend 
 
-A secure, scalable Node.js backend for the BockDocs platform, providing RESTful APIs for document management and user authentication. Integrates with Neon Postgres (via Prisma ORM) and supports both email/password and Google OAuth authentication (via Firebase Admin SDK).
+## Overview
 
----
+The **BockDocs Backend** is a RESTful API built with **Node.js and Express** that powers authentication, document management, sharing, and email workflows for the BockDocs application.
 
-## Features
+It serves web, mobile, and desktop clients built with Flutter.
 
-- User authentication (email/password & Google OAuth)
-- JWT-based session management
-- Document CRUD (create, read, update, delete)
-- PostgreSQL database (Neon) via Prisma ORM
-- Secure password hashing (bcrypt)
-- CORS and JSON body parsing
-- Environment-based configuration
+* * *
 
----
+## Architecture
+
+```
+┌─────────────────┐
+│   Flutter App   │  (Frontend - Web, iOS, Android, Desktop)
+│   (Dart)        │
+└────────┬────────┘
+         │ HTTP/REST API
+         │
+┌────────▼────────┐
+│  Node.js/Express│  (Backend Server)
+│   (JavaScript)  │
+└────────┬────────┘
+         │
+┌────────▼────────┐
+│  PostgreSQL     │  (Database - Neon)
+│   (via Prisma)  │
+└─────────────────┘
+```
+
+* * *
 
 ## Tech Stack
 
-- **Node.js** & **Express** — REST API server
-- **Prisma ORM** — Database access and migrations
-- **PostgreSQL (Neon)** — Cloud database
-- **Firebase Admin SDK** — Google OAuth token verification
-- **JWT** — Authentication tokens
-- **bcryptjs** — Password hashing
-- **dotenv** — Environment variable management
+*   **Runtime**: Node.js 18+
+    
+*   **Framework**: Express.js 5.1.0
+    
+*   **Database**: PostgreSQL (Neon)
+    
+*   **ORM**: Prisma 6.16.3
+    
+*   **Authentication**:
+    
+    *   JWT (jsonwebtoken 9.0.2)
+        
+    *   Google OAuth (google-auth-library 10.5.0)
+        
+*   **Password Hashing**: bcryptjs 3.0.2
+    
+*   **Email**: nodemailer 7.0.10
+    
+*   **CORS**: cors 2.8.5
+    
 
----
+* * *
 
 ## Project Structure
 
 ```
-BockDocs-backend/
-  controllers/         # Route controllers (auth, document)
-  generated/           # Prisma generated client
-  prisma/              # Prisma schema and migrations
-  routes/              # Express route definitions
-  firebaseAdmin.js     # Firebase Admin SDK initialization
-  prismaClient.js      # Prisma client instance
-  .env                 # Environment variables
-  index.js             # App entry point
-  package.json
-  serviceAccountKey.json (not committed)
+BockDocs/
+├── backend/                    # Node.js backend server
+│   ├── controllers/            # Route controllers
+│   │   ├── authController.js   # Authentication logic
+│   │   └── documentController.js # Document CRUD operations
+│   ├── middleware/            # Express middleware
+│   │   ├── authMiddleware.js   # JWT authentication
+│   │   └── optionalAuthMiddleware.js # Optional auth for shared docs
+│   ├── routes/                # API route definitions
+│   │   ├── authRoutes.js      # Auth endpoints
+│   │   └── documentRoutes.js   # Document endpoints
+│   ├── utils/                 # Utility functions
+│   │   └── emailService.js    # Email sending service
+│   ├── prisma/                # Database schema and migrations
+│   │   ├── schema.prisma      # Prisma schema
+│   │   └── migrations/        # Database migrations
+│   ├── generated/             # Prisma generated client
+│   ├── prismaClient.js        # Prisma client instance
+│   ├── index.js               # Server entry point
+│   └── package.json           # Backend dependencies
+│
+├──
 ```
+* * *
 
----
+## Getting Started
 
-## API Endpoints
+### Prerequisites
 
-### Auth
+*   Node.js 18+
+    
+*   npm
+    
+*   PostgreSQL database (Neon recommended)
+    
 
-- `POST   /auth/signup`      — Register with email & password
-- `POST   /auth/signin`      — Login with email & password
-- `POST   /auth/google`      — Login/Upsert with Google OAuth (ID token)
-- `GET    /auth/me`          — Get current user (JWT required)
-- `POST   /auth/logout`      — Logout (client-side token removal)
+* * *
 
-### Documents
+### Installation
 
-- `POST   /documents/create`         — Create a new document
-- `GET    /documents/:id`            — Get a document by ID
-- `GET    /documents/user/:userId`   — Get all documents for a user
-- `PUT    /documents/save/:id`       — Update a document
-- `DELETE /documents/delete/:id`     — Delete a document
+`cd backend npm install`
 
----
+* * *
 
-## Database Schema
+### Environment Configuration
 
-Prisma models (`prisma/schema.prisma`):
+Create a `.env` file inside `backend/`:
 
-```prisma
-model User {
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
-  password String?
-  uid      String?  @unique
-  documents Document[]
-}
-
-model Document {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  title        String
-  content      String?
-  createdAt    DateTime @default(now())
-  lastModified DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id])
-}
-```
-
----
-
-## Environment Variables
-
-`.env` example:
-```
-DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
-JWT_SECRET=your_jwt_secret
-GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
-```
-
-- `DATABASE_URL`: Neon Postgres connection string
-- `JWT_SECRET`: Secret for signing JWT tokens
-- `GOOGLE_APPLICATION_CREDENTIALS`: Path to your Firebase service account JSON
-
----
-
-## Setup & Development
-
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/BOCK-CHAIN/BockDocs-backend.git
-   cd BockDocs-backend
+```env
+   # Database
+   DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+   
+   # JWT Secret
+   JWT_SECRET=your_secure_jwt_secret_key_here
+   
+   # Google OAuth (optional)
+   GOOGLE_CLIENT_ID=your_google_client_id
+   
+   # Email Configuration (optional)
+   EMAIL_SERVICE=gmail
+   EMAIL_USER=your-email@gmail.com
+   EMAIL_PASSWORD=your-app-password
+   EMAIL_FROM=noreply@bockdocs.com
+   
+   # Frontend URL (for email links)
+   FRONTEND_BASE_URL=http://localhost:8080
+   FRONTEND_URL=http://localhost:5000
+   
+   # Server Configuration
+   PORT=5050
+   HOST=0.0.0.0
+   NODE_ENV=development
    ```
 
-2. **Install dependencies:**
-   ```sh
-   npm install
-   ```
-
-3. **Configure environment variables:**
-   - DATABASE_URL=your neon url
-JWT_SECRET=bockdocs
-GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
-
-4. **Set up Prisma and database:**
-   ```sh
+4. **Set up Prisma:**
+   ```bash
    npx prisma generate
    npx prisma migrate deploy
    ```
 
 5. **Start the server:**
-   ```sh
+   ```bash
    npm start
+   # Or for development with auto-reload:
+   npm run dev
    ```
 
----
+   The server will start on `http://localhost:5050` (or the port specified in `.env`).
 
-## Authentication Flow
+* * *
 
-- **Email/Password:** Users register and login via `/auth/signup` and `/auth/signin`. Passwords are hashed with bcrypt. JWT is returned and must be sent in the `Authorization` header for protected routes.
-- **Google OAuth:** Frontend obtains a Firebase ID token via Google sign-in, then POSTs it to `/auth/google`. The backend verifies the token with Firebase Admin SDK and upserts the user.
+### Prisma Setup
 
----
+`npx prisma generate npx prisma migrate deploy`
 
-## Security Notes
+* * *
 
-- Never commit your `.env` or `serviceAccountKey.json` to version control.
-- Always use strong JWT secrets and secure your database credentials.
-- CORS is enabled for development; restrict origins in production.
+### Start Server
 
----
+`npm start`
+
+or (development):
+
+`npm run dev`
+
+Server runs at:
+
+`http://localhost:5050`
+
+Health check:
+
+`GET /health`
+
+* * *
+
+## Authentication
+
+### Supported Methods
+
+*   Email & Password
+    
+*   Google OAuth (ID Token or Access Token)
+    
+
+### JWT Token
+
+*   Expiry: **7 days**
+    
+*   Payload:
+    
+
+`{ "id": userId, "email": userEmail }`
+
+*   Header format:
+    
+
+`Authorization: Bearer <token>`
+
+* * *
+
+## API Routes
+
+### Auth Routes (`/api/auth`)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /signup | Register user |
+| POST | /signin | Login |
+| POST | /google | Google OAuth (ID token) |
+| POST | /google-access | Google OAuth (access token) |
+| POST | /forgot-password | Request reset |
+| POST | /reset-password | Reset password |
+| GET | /me | Current user |
+| PUT | /profile | Update profile |
+| PUT | /password | Change password |
+| DELETE | /account | Delete account |
+| POST | /logout | Logout |
+
+* * *
+
+### Document Routes (`/api/documents`)
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| POST | /create | Create document |
+| GET | / | Get user documents |
+| GET | /:id | Get document |
+| PUT | /save/:id | Save document |
+| DELETE | /delete/:id | Delete document |
+| POST | /share/:docId | Create share link |
+| GET | /share/:token | Access shared doc |
+| POST | /share/:docId/email | Share via email |
+
+* * *
+
+## Database Schema
+
+### User Model
+
+```prisma
+model User {
+  id                Int        @id @default(autoincrement())
+  email             String     @unique
+  password          String?
+  uid               String?    @unique  // Google user ID
+  name              String?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  documents         Document[]
+}
+```
+
+### Document Model
+
+```prisma
+model Document {
+  id           Int         @id @default(autoincrement())
+  userId       Int
+  title        String
+  content      String?
+  createdAt    DateTime    @default(now())
+  lastModified DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id])
+  ShareLink    ShareLink[]
+}
+```
+
+### ShareLink Model
+
+```prisma
+model ShareLink {
+  id         Int       @id @default(autoincrement())
+  token      String    @unique
+  permission String    // "view" or "edit"
+  expiresAt  DateTime?
+  documentId Int
+  document   Document  @relation(fields: [documentId], references: [id])
+}
+```
+* * *
+
+## Email Support
+
+Supports:
+
+*   Gmail SMTP
+    
+*   Custom SMTP
+    
+*   Development fallback (logs to console)
+    
+
+Used for:
+
+*   Password reset
+    
+*   Document sharing
+    
+
+* * *
+
+## Troubleshooting
+
+**Port in use**
+
+`lsof -i :5050 kill -9 <PID>`
+
+**Database errors**
+
+*   Verify `DATABASE_URL`
+    
+*   Run `npx prisma generate`
+    
+
+**JWT errors**
+
+*   Check `JWT_SECRET`
+    
+*   Ensure `Bearer` header format
+    
+
+* * *
 
 ## License
 
-MIT
+MIT License
